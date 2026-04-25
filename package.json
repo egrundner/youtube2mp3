@@ -1,0 +1,55 @@
+{
+  "name": "youtube2mp3",
+  "version": "1.0.0",
+  "description": "YouTube to MP3 Downloader with GUI",
+  "main": "src/main.js",
+  "homepage": "https://github.com/youtube2mp3",
+  "scripts": {
+    "start": "electron . --no-sandbox",
+    "build": "npm run postinstall && electron-builder --linux AppImage deb",
+    "postinstall": "pip3 install --break-system-packages yt-dlp && cp $(which yt-dlp) ./yt-dlp-bin 2>/dev/null || true"
+  },
+  "author": "YouTube2MP3",
+  "license": "MIT",
+  "build": {
+    "appId": "com.youtube2mp3.app",
+    "productName": "YouTube2MP3",
+    "copyright": "Copyright 2024 YouTube2MP3",
+    "directories": {
+      "output": "dist"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "maintainer": "YouTube2MP3",
+      "vendor": "YouTube2MP3",
+      "category": "Audio"
+    },
+    "deb": {
+      "depends": ["ffmpeg", "python3"]
+    },
+    "files": [
+      "src/**/*",
+      "yt-dlp-bin"
+    ],
+    "extraFiles": [
+      {
+        "from": "./yt-dlp-bin",
+        "to": "yt-dlp",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asar": true
+  },
+  "dependencies": {
+    "fluent-ffmpeg": "^2.1.2"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  }
+}

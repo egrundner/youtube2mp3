@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'">
+  <title>YouTube2MP3</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #1a1a2e;
+      color: #eaeaea;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      padding: 40px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      color: #e94560;
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 40px;
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 16px 20px;
+      font-size: 14px;
+      border: 2px solid #0f3460;
+      border-radius: 8px;
+      background: #16213e;
+      color: #eaeaea;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #e94560;
+    }
+
+    input[type="text"]::placeholder {
+      color: #666;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    button {
+      padding: 16px 32px;
+      font-size: 14px;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+
+    .btn-primary {
+      background: #e94560;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #ff6b6b;
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: #0f3460;
+      color: white;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #1a4a7a;
+    }
+
+    button:disabled {
+      background: #555555;
+      cursor: not-allowed;
+    }
+
+    .folder-display {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 24px;
+      word-break: break-all;
+    }
+
+    .progress-container {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .progress-container.visible {
+      display: block;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #16213e;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #e94560, #ff6b6b);
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    .status {
+      font-size: 14px;
+      color: #4ecca3;
+      margin-bottom: 16px;
+    }
+
+    .result {
+      margin-top: 24px;
+      padding: 20px;
+      background: #16213e;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .result.visible {
+      display: block;
+    }
+
+    .result-title {
+      font-size: 16px;
+      margin-bottom: 12px;
+      word-break: break-word;
+    }
+
+    .link {
+      color: #4ecca3;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .link:hover {
+      color: #6fffdb;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>YouTube2MP3</h1>
+    <p class="subtitle">YouTube Video als MP3 herunterladen</p>
+
+    <div class="input-group">
+      <input type="text" id="urlInput" placeholder="YouTube URL hier einfügen..." autofocus>
+    </div>
+
+    <p class="folder-display" id="folderDisplay">Speicherort: Downloads</p>
+
+    <div class="btn-row">
+      <button id="selectFolderBtn" class="btn-secondary">Ordner wählen</button>
+      <button id="downloadBtn" class="btn-primary">Herunterladen</button>
+    </div>
+
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <p class="status" id="statusText">Warte...</p>
+    </div>
+
+    <div class="result" id="resultDiv">
+      <p class="result-title" id="resultTitle"></p>
+      <p class="link" id="openFolder">Ordner öffnen</p>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    const urlInput = document.getElementById('urlInput');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const selectFolderBtn = document.getElementById('selectFolderBtn');
+    const folderDisplay = document.getElementById('folderDisplay');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const statusText = document.getElementById('statusText');
+    const resultDiv = document.getElementById('resultDiv');
+    const resultTitle = document.getElementById('resultTitle');
+    const openFolder = document.getElementById('openFolder');
+
+    async function loadOutputPath() {
+      const path = await ipcRenderer.invoke('get-output-path');
+      folderDisplay.textContent = 'Speicherort: ' + path;
+    }
+
+    loadOutputPath();
+
+    downloadBtn.addEventListener('click', async () => {
+      const url = urlInput.value.trim();
+      if (!url) {
+        statusText.textContent = 'Bitte URL eingeben';
+        statusText.style.color = '#e94560';
+        return;
+      }
+
+      downloadBtn.disabled = true;
+      selectFolderBtn.disabled = true;
+      progressContainer.classList.add('visible');
+      resultDiv.classList.remove('visible');
+      progressFill.style.width = '0%';
+      statusText.style.color = '#4ecca3';
+      statusText.textContent = 'Starte...';
+
+      try {
+        const result = await ipcRenderer.invoke('download-mp3', url);
+        resultTitle.textContent = 'Download abgeschlossen!';
+        resultDiv.classList.add('visible');
+        urlInput.value = '';
+      } catch (error) {
+        statusText.textContent = error;
+        statusText.style.color = '#e94560';
+      }
+
+      downloadBtn.disabled = false;
+      selectFolderBtn.disabled = false;
+    });
+
+    selectFolderBtn.addEventListener('click', async () => {
+      const path = await ipcRenderer.invoke('select-folder');
+      if (path) {
+        folderDisplay.textContent = 'Speicherort: ' + path;
+      }
+    });
+
+    ipcRenderer.on('progress', (event, data) => {
+      progressFill.style.width = data.percent + '%';
+      statusText.textContent = data.status;
+    });
+
+    openFolder.addEventListener('click', () => {
+      ipcRenderer.invoke('open-folder');
+    });
+
+    urlInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') downloadBtn.click();
+    });
+  </script>
+</body>
+</html>
