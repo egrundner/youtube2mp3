@@ -33,7 +33,7 @@ Manual installation
 sudo apt install ffmpeg python3
 
 # 2. Clone repository
-git clone https://github.com/your-repo/youtube2mp3.git
+git clone https://github.com/egrundner/youtube2mp3.git
 cd youtube2mp3
 
 # 3. Install and run
