@@ -22,6 +22,7 @@ Installation
 
 chmod +x YouTube2MP3-1.0.0.AppImage
 ./YouTube2MP3-1.0.0.AppImage
+
 2. DEB package (Debian/Ubuntu)
 
 sudo dpkg -i youtube2mp3_1.0.0_amd64.deb
